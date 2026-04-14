@@ -1,0 +1,116 @@
+%function [P_drop, X_drop,time_axis_reduced, X_train, X_test, y_train, y_test, y_train_hat, y_test_hat] = readout_layer(E_drop, target, time_axis, steps_per_bit, N_mask, Warm1, Warm2, Ltrain, Ltest)
+
+%    M = steps_per_bit/N_mask;                             % Number of samples per virtual node
+    
+%    P_drop = abs(E_drop).^2; 
+%    time_axis_reduced = mean(reshape(time_axis, M, []), 1); 
+%    X_drop = mean(reshape(P_drop, M, []), 1);
+    %X_drop = mean(reshape(E_drop, M, []), 1);
+    %X_drop = abs(X_drop).^2; 
+   
+
+%    y_train = target(Warm1+1 : Warm1+Ltrain);
+%    y_train = y_train(:);
+
+%    y_test = target(Warm1+Ltrain+Warm2+1 : Warm1+Ltrain+Warm2+Ltest);
+%    y_test = y_test(:);
+
+%    LAMBDA = 1e-9;
+
+    %X_train = X_drop(Warm1*N_mask+1 : (Warm1+Ltrain)*N_mask);
+%    X_train = X_drop(1 : Ltrain*N_mask);
+    
+%    if ~isempty(X_train)
+%        X_train = reshape(X_train, N_mask, Ltrain).';
+      
+%        X_train = X_train / max(X_train,[],'all'); 
+        
+        %X_train = [ones(Ltrain,1), X_train];  
+%    else
+%        disp("X_train is empty")
+%    end
+
+   
+    % Ridge regression
+    %w = (X_train.'*X_train + LAMBDA*eye(size(X_train,2))) \ (X_train.'*y_train);
+%    w = (X_train.'*X_train + LAMBDA*eye(N_mask)) \ (X_train.'*y_train);
+%    y_train_hat = X_train*w;
+
+    %X_test = X_drop((Warm1+Ltrain+Warm2)*N_mask+1 : (Warm1+Ltrain+Warm2+Ltest)*N_mask);
+%    X_test = X_drop(Ltrain*N_mask+1 : (Ltrain+Ltest)*N_mask);
+
+%    if ~isempty(X_test)
+%        X_test = reshape(X_test, N_mask, Ltest).';
+        
+%        X_test = X_test / max(X_test,[],'all'); 
+        
+        %X_test = [ones(Ltest,1), X_test];      % Add bias column
+%        y_test_hat = X_test*w;
+%    else
+%        disp("X_test is empty")
+%        y_test_hat = [];
+%    end
+%end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function [P_drop, X_drop, time_axis_reduced, X_train, X_test, y_train, y_test, y_train_hat, y_test_hat] = readout_layer(E_drop, target, time_axis, steps_per_bit, N_mask, Warm1, Warm2, Ltrain, Ltest, total_L)
+    assert(mod(steps_per_bit, N_mask) == 0, 'steps_per_bit must be divisible by N_mask');
+    M = steps_per_bit / N_mask;
+
+    P_drop = abs(E_drop).^2;
+
+    LAMBDA = 1e-9;
+
+    assert(mod(numel(P_drop), M) == 0, 'numel(P_drop) must be divisible by M');
+    assert(mod(numel(time_axis), M) == 0, 'numel(time_axis) must be divisible by M');
+
+    time_axis_reduced = mean(reshape(time_axis, M, []), 1);
+    X_drop = mean(reshape(P_drop, M, []), 1);
+    %X_drop = X_drop / max(X_drop); 
+    X_drop = reshape(X_drop,N_mask,total_L).'; 
+
+    X_train = X_drop(Warm1+1:Warm1+Ltrain,:); 
+    X_test = X_drop(Warm1+Ltrain+Warm2+1:end,:);
+
+   
+    %X_train = X_drop(Warm1*N_mask + 1 : (Warm1+Ltrain)*N_mask);
+    %X_test  = X_drop((Warm1+Ltrain+Warm2)*N_mask + 1 : (Warm1+Ltrain+Warm2+Ltest)*N_mask);
+
+    
+
+    %scale = max(X_train);
+    %if scale ~= 0
+    %    X_train = X_train / scale;
+    %    X_test  = X_test  / scale;
+    %end
+
+    %X_train = reshape(X_train, N_mask, Ltrain).';
+    %X_test  = reshape(X_test,  N_mask, Ltest ).';
+
+ 
+    y_train = target(Warm1+1 : Warm1+Ltrain);
+    %y_train = target(Warm1 : Warm1+Ltrain-1);
+    y_train = y_train(:);
+
+    y_test = target(Warm1+Ltrain+Warm2+1 : Warm1+Ltrain+Warm2+Ltest);
+    %y_test = target(Warm1+Ltrain+Warm2 : Warm1+Ltrain+Warm2+Ltest-1);
+    y_test = y_test(:);
+
+    W = ridge(y_train, X_train, LAMBDA, 0);
+
+    y_train_hat = W(1) + X_train * W(2:end);
+    y_test_hat = W(1) + X_test * W(2:end);
+
+end
